@@ -1,0 +1,6 @@
+{
+  "name": "Local Soccer Mega Auction",
+  "description": "A live sports auction room client for conducting local, real-time multiplayer draft events and team building.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
