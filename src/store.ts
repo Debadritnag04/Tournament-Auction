@@ -1,5 +1,15 @@
 import { create } from 'zustand';
-import { Player, Team, AuctionConfig, BidHistory, AppStep } from './types';
+import { Player, Team, AuctionConfig, BidHistory, AppStep, AuctionPot } from './types';
+
+// Bid increment logic per spec
+function getNextBid(currentBid: number): number {
+  let increment: number;
+  if (currentBid <= 20) increment = 1;
+  else if (currentBid <= 40) increment = 2;
+  else if (currentBid <= 70) increment = 5;
+  else increment = 10;
+  return Math.round((currentBid + increment) * 10) / 10;
+}
 
 interface AppState {
   step: AppStep;
@@ -7,13 +17,14 @@ interface AppState {
   teams: Team[];
   players: Player[];
   history: BidHistory[];
-  
-  // Auction Live Data
+  currentPot: AuctionPot;
+
+  // Auction Live State
   currentPlayerId: string | null;
   currentBid: number;
   currentLeadingTeamId: string | null;
   timer: number;
-  
+
   // Actions
   setStep: (step: AppStep) => void;
   updateConfig: (config: Partial<AuctionConfig>) => void;
@@ -21,23 +32,24 @@ interface AppState {
   updateTeam: (id: string, diff: Partial<Team>) => void;
   setPlayers: (players: Player[]) => void;
   updatePlayer: (id: string, diff: Partial<Player>) => void;
-  
+  setCurrentPot: (pot: AuctionPot) => void;
+
   // Auction Actions
   startAuctionForPlayer: (playerId: string) => void;
   placeBid: (teamId: string) => void;
   sellPlayer: () => void;
   markUnsold: () => void;
-  retainPlayer: (playerId: string, teamId: string, price: number) => void;
+  retainPlayer: (playerId: string, teamId: string) => void;
   revivePlayers: (playerIds: string[]) => void;
   tickTimer: () => void;
   resetTimer: () => void;
 }
 
 const DEFAULT_CONFIG: AuctionConfig = {
-  minPlayers: 15,
-  maxPlayers: 25,
+  minPlayers: 8,
+  maxPlayers: 12,
+  maxRetentions: 2,
   autoTimer: 15,
-  defaultStartingBid: 0.5, // 0.5 Cr
 };
 
 export const useStore = create<AppState>((set, get) => ({
@@ -46,76 +58,64 @@ export const useStore = create<AppState>((set, get) => ({
   teams: [],
   players: [],
   history: [],
-  
+  currentPot: 'GK',
+
   currentPlayerId: null,
   currentBid: 0,
   currentLeadingTeamId: null,
   timer: 0,
-  
+
   setStep: (step) => set({ step }),
-  
-  updateConfig: (config) => set((state) => ({ config: { ...state.config, ...config } })),
-  
+  updateConfig: (config) => set((s) => ({ config: { ...s.config, ...config } })),
   setTeams: (teams) => set({ teams }),
-  
-  updateTeam: (id, diff) => set((state) => ({
-    teams: state.teams.map(t => t.id === id ? { ...t, ...diff } : t)
+  updateTeam: (id, diff) => set((s) => ({
+    teams: s.teams.map(t => t.id === id ? { ...t, ...diff } : t),
   })),
-  
   setPlayers: (players) => set({ players }),
-  
-  updatePlayer: (id, diff) => set((state) => ({
-    players: state.players.map(p => p.id === id ? { ...p, ...diff } : p)
+  updatePlayer: (id, diff) => set((s) => ({
+    players: s.players.map(p => p.id === id ? { ...p, ...diff } : p),
   })),
-  
-  startAuctionForPlayer: (playerId) => set((state) => {
-    const player = state.players.find(p => p.id === playerId);
+  setCurrentPot: (pot) => set({ currentPot: pot }),
+
+  startAuctionForPlayer: (playerId) => set((s) => {
+    const player = s.players.find(p => p.id === playerId);
     return {
       currentPlayerId: playerId,
-      currentBid: player?.basePrice || state.config.defaultStartingBid,
+      currentBid: player?.basePrice || 1,
       currentLeadingTeamId: null,
-      timer: state.config.autoTimer,
+      timer: s.config.autoTimer,
     };
   }),
-  
-  placeBid: (teamId) => set((state) => {
-    const { currentBid, currentLeadingTeamId } = state;
-    let nextBid = currentBid;
-    
-    if (currentLeadingTeamId !== null) {
-      if (currentBid < 5) {
-        nextBid += 0.5;
-      } else if (currentBid < 10) {
-        nextBid += 1;
-      } else {
-        nextBid += 2;
-      }
-    }
-    
-    // Ensure accurate floating point arithmetic
-    nextBid = Math.round(nextBid * 10) / 10;
-    
+
+  placeBid: (teamId) => set((s) => {
+    const { currentBid, currentLeadingTeamId } = s;
+    // First bid stays at base price, subsequent bids increment
+    const nextBid = currentLeadingTeamId === null ? currentBid : getNextBid(currentBid);
+
     return {
       currentBid: nextBid,
       currentLeadingTeamId: teamId,
-      timer: state.config.autoTimer,
-      history: [...state.history, {
+      timer: s.config.autoTimer, // Reset timer by full duration on each bid
+      history: [...s.history, {
         id: crypto.randomUUID(),
-        playerId: state.currentPlayerId!,
-        teamId: teamId,
+        playerId: s.currentPlayerId!,
+        teamId,
         amount: nextBid,
-        timestamp: new Date().toISOString()
-      }]
+        timestamp: new Date().toISOString(),
+      }],
     };
   }),
 
-  sellPlayer: () => set((state) => {
-    const { currentPlayerId, currentBid, currentLeadingTeamId, players, teams } = state;
-    if (!currentPlayerId || !currentLeadingTeamId) return state;
-
+  sellPlayer: () => set((s) => {
+    const { currentPlayerId, currentBid, currentLeadingTeamId, players, teams } = s;
+    if (!currentPlayerId || !currentLeadingTeamId) return s;
     return {
-      players: players.map(p => p.id === currentPlayerId ? { ...p, status: 'sold', teamId: currentLeadingTeamId, soldPrice: currentBid } : p),
-      teams: teams.map(t => t.id === currentLeadingTeamId ? { ...t, spent: t.spent + currentBid } : t),
+      players: players.map(p => p.id === currentPlayerId
+        ? { ...p, status: 'sold' as const, teamId: currentLeadingTeamId, soldPrice: currentBid }
+        : p),
+      teams: teams.map(t => t.id === currentLeadingTeamId
+        ? { ...t, spent: Math.round((t.spent + currentBid) * 10) / 10 }
+        : t),
       currentPlayerId: null,
       currentBid: 0,
       currentLeadingTeamId: null,
@@ -123,12 +123,13 @@ export const useStore = create<AppState>((set, get) => ({
     };
   }),
 
-  markUnsold: () => set((state) => {
-    const { currentPlayerId, players } = state;
-    if (!currentPlayerId) return state;
-
+  markUnsold: () => set((s) => {
+    const { currentPlayerId, players } = s;
+    if (!currentPlayerId) return s;
     return {
-      players: players.map(p => p.id === currentPlayerId ? { ...p, status: 'unsold' } : p),
+      players: players.map(p => p.id === currentPlayerId
+        ? { ...p, status: 'unsold' as const }
+        : p),
       currentPlayerId: null,
       currentBid: 0,
       currentLeadingTeamId: null,
@@ -136,23 +137,26 @@ export const useStore = create<AppState>((set, get) => ({
     };
   }),
 
-  retainPlayer: (playerId, teamId, price) => set((state) => {
-    const { players, teams } = state;
+  retainPlayer: (playerId, teamId) => set((s) => {
+    const player = s.players.find(p => p.id === playerId);
+    if (!player) return s;
+    const price = player.retentionPrice;
     return {
-      players: players.map(p => p.id === playerId ? { ...p, status: 'retained', teamId, soldPrice: price } : p),
-      teams: teams.map(t => t.id === teamId ? { ...t, spent: t.spent + price } : t),
+      players: s.players.map(p => p.id === playerId
+        ? { ...p, status: 'retained' as const, teamId, soldPrice: price }
+        : p),
+      teams: s.teams.map(t => t.id === teamId
+        ? { ...t, spent: Math.round((t.spent + price) * 10) / 10 }
+        : t),
     };
   }),
 
-  revivePlayers: (playerIds) => set((state) => ({
-    players: state.players.map(p => playerIds.includes(p.id) ? { ...p, status: 'available' } : p)
+  revivePlayers: (playerIds) => set((s) => ({
+    players: s.players.map(p => playerIds.includes(p.id)
+      ? { ...p, status: 'available' as const }
+      : p),
   })),
 
-  tickTimer: () => set((state) => ({
-    timer: Math.max(0, state.timer - 1)
-  })),
-
-  resetTimer: () => set((state) => ({
-    timer: state.config.autoTimer
-  }))
+  tickTimer: () => set((s) => ({ timer: Math.max(0, s.timer - 1) })),
+  resetTimer: () => set((s) => ({ timer: s.config.autoTimer })),
 }));

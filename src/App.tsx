@@ -15,21 +15,25 @@ import Results from './components/Results';
 export default function App() {
   const step = useStore(state => state.step);
 
+  // Auction step uses its own full-screen layout
+  if (step === 'auction') {
+    return <LiveAuction />;
+  }
+
   return (
-    <div className="min-h-screen bg-[#020203] text-white font-sans selection:bg-[#f27d26]/30 overflow-hidden relative flex flex-col">
+    <div className="min-h-screen bg-[#020203] text-white font-sans selection:bg-[#f27d26]/30 relative flex flex-col">
       {/* Background Atmosphere */}
-      <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none z-0">
+      <div className="fixed top-0 left-0 w-full h-full opacity-20 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#f27d26] rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#2662f2] rounded-full blur-[120px]"></div>
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col overflow-y-auto">
+      <div className="relative z-10 flex-1 flex flex-col">
         {step === 'landing' && <LandingPage />}
         {step === 'setup' && <SetupWizard />}
         {step === 'teams' && <TeamSetup />}
         {step === 'import' && <ImportData />}
         {step === 'retention' && <RetentionPhase />}
-        {step === 'auction' && <LiveAuction />}
         {step === 'results' && <Results />}
       </div>
     </div>
