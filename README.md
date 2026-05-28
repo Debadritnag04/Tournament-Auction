@@ -55,6 +55,3 @@ A comprehensive, interactive web application for hosting live sports tournament 
    ```bash
    npm run build
    ```
-
-## Original App Link
-View the original app scaffolded via AI Studio: [https://ai.studio/apps/f562f664-7b61-44fb-87b5-aad72581d8ef](https://ai.studio/apps/f562f664-7b61-44fb-87b5-aad72581d8ef)
