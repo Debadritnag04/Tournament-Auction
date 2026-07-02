@@ -38,7 +38,7 @@ A comprehensive, interactive web application for hosting live sports tournament 
 
 After deployment, the following API endpoints are available. All endpoints require an API key passed via the `x-api-key` header.
 
-**Base URL:** `https://your-app.vercel.app`
+**Base URL:** `https://tournament-auction-five.vercel.app`
 
 ### Authentication
 
@@ -72,7 +72,7 @@ Returns all teams with their purchased players, prices, and full player info.
 **Example Request:**
 
 ```bash
-curl -H "x-api-key: YOUR_API_KEY" https://your-app.vercel.app/api/squads
+curl -H "x-api-key: YOUR_API_KEY" https://tournament-auction-five.vercel.app/api/squads
 ```
 
 **Example Response:**
@@ -138,7 +138,7 @@ Returns all players in the master player database.
 **Example:**
 
 ```bash
-curl -H "x-api-key: YOUR_API_KEY" https://your-app.vercel.app/api/players?position=ATT
+curl -H "x-api-key: YOUR_API_KEY" https://tournament-auction-five.vercel.app/api/players?position=ATT
 ```
 
 ---
@@ -150,7 +150,7 @@ Returns all seasons with summary statistics.
 **Example:**
 
 ```bash
-curl -H "x-api-key: YOUR_API_KEY" https://your-app.vercel.app/api/seasons
+curl -H "x-api-key: YOUR_API_KEY" https://tournament-auction-five.vercel.app/api/seasons
 ```
 
 **Response:**
@@ -191,10 +191,10 @@ Returns historical squad data (immutable snapshots from completed seasons).
 
 ```bash
 # All squads from Season 2
-curl -H "x-api-key: YOUR_API_KEY" "https://your-app.vercel.app/api/history?season_id=SEASON_UUID"
+curl -H "x-api-key: YOUR_API_KEY" "https://tournament-auction-five.vercel.app/api/history?season_id=SEASON_UUID"
 
 # Player career history
-curl -H "x-api-key: YOUR_API_KEY" "https://your-app.vercel.app/api/history?player_id=PLAYER_UUID"
+curl -H "x-api-key: YOUR_API_KEY" "https://tournament-auction-five.vercel.app/api/history?player_id=PLAYER_UUID"
 ```
 
 ---
