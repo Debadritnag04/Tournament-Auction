@@ -26,6 +26,7 @@ const TIER_RET: Record<Tier, number> = { S: 18, A: 13, B: 8, C: 4, D: 2 };
 
 export default function ImportData() {
   const { setPlayers, setStep } = useStore();
+  const auctionMode = useStore(s => s.auctionMode);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
@@ -159,10 +160,10 @@ export default function ImportData() {
             <ArrowLeft className="w-4 h-4" /> Go Back
           </button>
           <button
-            onClick={() => setStep('retention')}
+            onClick={() => setStep(auctionMode === 'mega' ? 'auction' : 'retention')}
             className="px-8 py-4 bg-[#f27d26] hover:bg-[#d96a1a] text-black font-black uppercase tracking-widest rounded transition-colors flex items-center gap-2 cursor-pointer"
           >
-            Retention Phase <ArrowRight className="w-4 h-4" />
+            {auctionMode === 'mega' ? 'Start Auction' : 'Retention Phase'} <ArrowRight className="w-4 h-4" />
           </button>
         </motion.div>
       )}

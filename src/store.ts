@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Player, Team, AuctionConfig, BidHistory, AppStep, AuctionPot } from './types';
+import { Player, Team, AuctionConfig, BidHistory, AppStep, AuctionPot, AuctionMode } from './types';
 
 // Bid increment logic per spec
 function getNextBid(currentBid: number): number {
@@ -14,6 +14,7 @@ function getNextBid(currentBid: number): number {
 interface AppState {
   step: AppStep;
   config: AuctionConfig;
+  auctionMode: AuctionMode;
   teams: Team[];
   players: Player[];
   history: BidHistory[];
@@ -28,6 +29,7 @@ interface AppState {
   // Actions
   setStep: (step: AppStep) => void;
   updateConfig: (config: Partial<AuctionConfig>) => void;
+  setAuctionMode: (mode: AuctionMode) => void;
   setTeams: (teams: Team[]) => void;
   updateTeam: (id: string, diff: Partial<Team>) => void;
   setPlayers: (players: Player[]) => void;
@@ -39,7 +41,7 @@ interface AppState {
   placeBid: (teamId: string) => void;
   sellPlayer: () => void;
   markUnsold: () => void;
-  retainPlayer: (playerId: string, teamId: string) => void;
+  retainPlayer: (playerId: string, teamId: string, price?: number) => void;
   revivePlayers: (playerIds: string[]) => void;
   tickTimer: () => void;
   resetTimer: () => void;
@@ -48,13 +50,14 @@ interface AppState {
 const DEFAULT_CONFIG: AuctionConfig = {
   minPlayers: 8,
   maxPlayers: 12,
-  maxRetentions: 2,
+  maxRetentions: 7,
   autoTimer: 15,
 };
 
 export const useStore = create<AppState>((set, get) => ({
   step: 'landing',
   config: DEFAULT_CONFIG,
+  auctionMode: 'mini',
   teams: [],
   players: [],
   history: [],
@@ -67,6 +70,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   setStep: (step) => set({ step }),
   updateConfig: (config) => set((s) => ({ config: { ...s.config, ...config } })),
+  setAuctionMode: (mode) => set({ auctionMode: mode }),
   setTeams: (teams) => set({ teams }),
   updateTeam: (id, diff) => set((s) => ({
     teams: s.teams.map(t => t.id === id ? { ...t, ...diff } : t),
@@ -137,16 +141,16 @@ export const useStore = create<AppState>((set, get) => ({
     };
   }),
 
-  retainPlayer: (playerId, teamId) => set((s) => {
+  retainPlayer: (playerId, teamId, price?) => set((s) => {
     const player = s.players.find(p => p.id === playerId);
     if (!player) return s;
-    const price = player.retentionPrice;
+    const retPrice = price ?? player.retentionPrice;
     return {
       players: s.players.map(p => p.id === playerId
-        ? { ...p, status: 'retained' as const, teamId, soldPrice: price }
+        ? { ...p, status: 'retained' as const, teamId, soldPrice: retPrice }
         : p),
       teams: s.teams.map(t => t.id === teamId
-        ? { ...t, spent: Math.round((t.spent + price) * 10) / 10 }
+        ? { ...t, spent: Math.round((t.spent + retPrice) * 10) / 10 }
         : t),
     };
   }),

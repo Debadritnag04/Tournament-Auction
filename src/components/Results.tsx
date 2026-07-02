@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Download, FileText, Trophy, ArrowLeft, RefreshCw, X, Filter } from 'lucide-react';
+import { Download, FileText, Trophy, ArrowLeft, RefreshCw, X, Filter, Search } from 'lucide-react';
 import { Tier } from '../types';
 
 const TIER_COLORS: Record<Tier, string> = {
@@ -16,9 +16,13 @@ export default function Results() {
   const [showRevive, setShowRevive] = useState(false);
   const [selectedToRevive, setSelectedToRevive] = useState<Set<string>>(new Set());
   const [reviveFilter, setReviveFilter] = useState('ALL');
+  const [reviveSearch, setReviveSearch] = useState('');
 
   const unsoldPlayers = players.filter(p => p.status === 'unsold');
-  const filteredUnsold = unsoldPlayers.filter(p => reviveFilter === 'ALL' || p.position === reviveFilter);
+  const filteredUnsold = unsoldPlayers.filter(p => 
+    (reviveFilter === 'ALL' || p.position === reviveFilter) &&
+    (!reviveSearch || p.name.toLowerCase().includes(reviveSearch.toLowerCase()))
+  );
 
   const handleExportCSV = () => {
     const csv = Papa.unparse(
@@ -344,7 +348,14 @@ export default function Results() {
                 <h2 className="text-xl font-black italic uppercase tracking-widest">Revive Unsold</h2>
                 <p className="text-[9px] text-white/40 uppercase tracking-widest mt-1">Select players to return to auction pool</p>
               </div>
-              <button onClick={() => setShowRevive(false)} className="text-white/40 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                  <input type="text" placeholder="Search player..." value={reviveSearch} onChange={e => setReviveSearch(e.target.value)} 
+                    className="w-48 bg-black/40 border border-white/10 pl-8 pr-3 py-1.5 text-[10px] focus:border-white/20 outline-none placeholder:text-white/20 rounded-sm" />
+                </div>
+                <button onClick={() => setShowRevive(false)} className="text-white/40 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+              </div>
             </div>
             <div className="p-3 border-b border-white/5 flex items-center gap-2 shrink-0">
               <Filter className="w-3.5 h-3.5 text-white/30" />

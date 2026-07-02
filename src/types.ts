@@ -52,3 +52,5 @@ export type AppStep =
   | 'retention'
   | 'auction'
   | 'results';
+
+export type AuctionMode = 'mega' | 'mini';

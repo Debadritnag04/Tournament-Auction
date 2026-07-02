@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { Users, Clock, Shield, Wallet } from 'lucide-react';
+import { Users, Clock, Shield, Wallet, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 
 // Import team logos
@@ -13,22 +13,22 @@ import logoDwipayan from '../Club-logo/dwipayan.jpeg';
 import logoDebdip from '../Club-logo/debdip.jpeg';
 
 const DEFAULT_TEAMS = [
-  { name: 'Coochbehar United FC', shortName: 'CUFC', primaryColor: '#DC143C', secondaryColor: '#1B2A4A', owner: 'Debadrit', logo: logoCoochbehar },
-  { name: 'Baghbazar Tigers', shortName: 'BGT', primaryColor: '#1B2A4A', secondaryColor: '#D4A017', owner: 'Sourish', logo: logoSourish },
-  { name: 'Kamarhati Knights', shortName: 'KMK', primaryColor: '#2952CC', secondaryColor: '#D4A017', owner: 'Subhojit', logo: logoSubhojit },
-  { name: 'Shobhabazar Smashers', shortName: 'SBS', primaryColor: '#1A237E', secondaryColor: '#D4A017', owner: 'Debanjan', logo: logoDebanjan },
-  { name: 'Dakshineshwar Deltas', shortName: 'DKD', primaryColor: '#B7472A', secondaryColor: '#5C6B7A', owner: 'Sumit', logo: logoSumit },
-  { name: 'Ichapur Invincibles', shortName: 'ICI', primaryColor: '#2952CC', secondaryColor: '#D4A017', owner: 'Dwipayan', logo: logoDwipayan },
-  { name: 'Krishnanagar City Junction FC', shortName: 'KCJ', primaryColor: '#1B2A4A', secondaryColor: '#D4A017', owner: 'Debdip', logo: logoDebdip },
+  { name: 'Coochbehar United FC', shortName: 'CUFC', primaryColor: '#DC143C', secondaryColor: '#1B2A4A', owner: 'Debadrit', logo: logoCoochbehar, purse: 234 },
+  { name: 'Baghbazar Tigers', shortName: 'BGT', primaryColor: '#1B2A4A', secondaryColor: '#D4A017', owner: 'Sourish', logo: logoSourish, purse: 236 },
+  { name: 'Kamarhati Knights', shortName: 'KMK', primaryColor: '#2952CC', secondaryColor: '#D4A017', owner: 'Subhojit', logo: logoSubhojit, purse: 222 },
+  { name: 'Shobhabazar Smashers', shortName: 'SBS', primaryColor: '#1A237E', secondaryColor: '#D4A017', owner: 'Debanjan', logo: logoDebanjan, purse: 210 },
+  { name: 'Dakshineshwar Deltas', shortName: 'DKD', primaryColor: '#B7472A', secondaryColor: '#5C6B7A', owner: 'Sumit', logo: logoSumit, purse: 202 },
+  { name: 'Ichapur Invincibles', shortName: 'ICI', primaryColor: '#2952CC', secondaryColor: '#D4A017', owner: 'Dwipayan', logo: logoDwipayan, purse: 222 },
+  { name: 'Krishnanagar City Junction FC', shortName: 'KCJ', primaryColor: '#1B2A4A', secondaryColor: '#D4A017', owner: 'Debdip', logo: logoDebdip, purse: 228 },
 ];
 
 export default function SetupWizard() {
-  const { config, updateConfig, setStep, setTeams } = useStore();
+  const { config, updateConfig, setStep, setTeams, setAuctionMode, auctionMode } = useStore();
   const [numTeams, setNumTeams] = useState(7);
   const [globalPurse, setGlobalPurse] = useState(200);
   const [useCustomPurse, setUseCustomPurse] = useState(false);
   const [customPurses, setCustomPurses] = useState<number[]>(
-    DEFAULT_TEAMS.map(() => 200)
+    DEFAULT_TEAMS.map(t => t.purse)
   );
 
   // Keep customPurses array in sync with numTeams
@@ -43,7 +43,7 @@ export default function SetupWizard() {
   const handleNext = () => {
     const initialTeams = Array.from({ length: numTeams }).map((_, i) => {
       const preset = DEFAULT_TEAMS[i];
-      const purse = useCustomPurse ? ensuredPurses[i] : globalPurse;
+      const purse = useCustomPurse ? ensuredPurses[i] : (preset ? preset.purse : globalPurse);
       if (preset) {
         return {
           id: crypto.randomUUID(),
@@ -83,6 +83,30 @@ export default function SetupWizard() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 mb-12">
+        {/* Auction Mode Selector — full width */}
+        <div className="bg-white/5 border border-white/10 p-8 md:col-span-2">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/5">
+            <Zap className="w-5 h-5 text-[#f27d26]" />
+            <h2 className="text-lg font-bold uppercase tracking-widest">Auction Mode</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <button onClick={() => setAuctionMode('mega')}
+              className={`p-6 border-2 rounded transition-all cursor-pointer text-left ${auctionMode === 'mega' ? 'border-[#f27d26] bg-[#f27d26]/10' : 'border-white/10 bg-white/[0.02] hover:border-white/20'}`}>
+              <div className="text-lg font-black uppercase italic tracking-tight mb-1">Mega Auction</div>
+              <div className="text-[9px] text-white/40 uppercase tracking-widest leading-relaxed">
+                Fresh start. No retentions. All players enter the pool. Full purse for every team.
+              </div>
+            </button>
+            <button onClick={() => setAuctionMode('mini')}
+              className={`p-6 border-2 rounded transition-all cursor-pointer text-left ${auctionMode === 'mini' ? 'border-[#f27d26] bg-[#f27d26]/10' : 'border-white/10 bg-white/[0.02] hover:border-white/20'}`}>
+              <div className="text-lg font-black uppercase italic tracking-tight mb-1">Mini Auction</div>
+              <div className="text-[9px] text-white/40 uppercase tracking-widest leading-relaxed">
+                Retain up to 7 players from last season. Retention cost deducted from purse. Remaining players enter pool.
+              </div>
+            </button>
+          </div>
+        </div>
+
         {/* Teams */}
         <div className="bg-white/5 border border-white/10 p-8">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/5">

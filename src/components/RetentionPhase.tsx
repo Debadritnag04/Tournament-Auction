@@ -1,188 +1,285 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ArrowRight, ShieldCheck, Play, ArrowLeft, X } from 'lucide-react';
-import { Tier } from '../types';
+import { Search, Play, ArrowLeft, ShieldCheck, X, AlertTriangle } from 'lucide-react';
+import { cn } from '../lib/utils';
+import retentionCsvRaw from '../retention_helper.csv?raw';
 
-const TIER_COLORS: Record<Tier, string> = {
-  S: '#fbbf24', A: '#a78bfa', B: '#60a5fa', C: '#34d399', D: '#9ca3af',
-};
+// Parse the retention CSV into structured data
+interface RetentionEntry {
+  playerName: string;
+  position: string;
+  soldPrice: number;
+  soldTo: string; // team name uppercase
+}
+
+function parseRetentionCSV(): RetentionEntry[] {
+  const lines = retentionCsvRaw.trim().split('\n');
+  const entries: RetentionEntry[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const parts = line.split(',');
+    if (parts.length < 4) continue;
+    // Clean up any unicode artifacts in names
+    const name = parts[0].replace(/[?\u200B\u200C\u200D\uFEFF]/g, '').trim();
+    const position = parts[1].trim();
+    const price = parseFloat(parts[2]) || 0;
+    const team = parts[3].trim().toUpperCase();
+    if (name && team) {
+      entries.push({ playerName: name, position, soldPrice: price, soldTo: team });
+    }
+  }
+  return entries;
+}
 
 export default function RetentionPhase() {
   const { teams, players, config, retainPlayer, setStep } = useStore();
   const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
   const [search, setSearch] = useState('');
-  const [confirmPlayer, setConfirmPlayer] = useState<string | null>(null);
+  const [confirmEntry, setConfirmEntry] = useState<RetentionEntry | null>(null);
 
-  const availablePlayers = players.filter(p =>
-    p.status === 'available' && p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const retentionData = useMemo(() => parseRetentionCSV(), []);
+
   const currentTeam = teams.find(t => t.id === selectedTeamId);
   const teamRetentions = players.filter(p => p.teamId === selectedTeamId && p.status === 'retained');
   const canRetain = teamRetentions.length < config.maxRetentions;
   const remaining = currentTeam ? currentTeam.startingPurse - currentTeam.spent : 0;
 
-  const handleRetain = (playerId: string) => {
-    const player = players.find(p => p.id === playerId);
-    if (!player || !currentTeam) return;
-    if (player.retentionPrice > remaining) return;
-    retainPlayer(playerId, currentTeam.id);
-    setConfirmPlayer(null);
+  // Filter retention CSV entries for the selected team
+  const teamEntries = useMemo(() => {
+    if (!currentTeam) return [];
+    const teamNameUpper = currentTeam.name.toUpperCase();
+    return retentionData.filter(e => e.soldTo === teamNameUpper);
+  }, [currentTeam, retentionData]);
+
+  // Filter by search
+  const filteredEntries = teamEntries.filter(e =>
+    !search || e.playerName.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Check if a player from the CSV is already retained
+  const isAlreadyRetained = (entry: RetentionEntry) => {
+    const matched = findPlayer(entry);
+    if (!matched) return false;
+    return matched.status === 'retained' && matched.teamId === selectedTeamId;
+  };
+
+  // Find matching player in the loaded players array
+  // Uses strict matching: exact match first, then progressively looser
+  const findPlayer = (entry: RetentionEntry) => {
+    const cleanEntry = entry.playerName.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+
+    // 1. Exact match (after cleaning)
+    const exact = players.find(p => {
+      const pClean = p.name.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+      return pClean === cleanEntry;
+    });
+    if (exact) return exact;
+
+    // 2. Match with position check (prevents Thiago MID matching Thiago Silva DEF)
+    const withPos = players.find(p => {
+      const pClean = p.name.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+      const posMatch = p.position === entry.position;
+      return posMatch && (pClean.includes(cleanEntry) || cleanEntry.includes(pClean));
+    });
+    if (withPos) return withPos;
+
+    // 3. Loose match — only if the entry name is long enough to be unambiguous (>8 chars)
+    if (cleanEntry.length > 8) {
+      const loose = players.find(p => {
+        const pClean = p.name.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+        return pClean.includes(cleanEntry) || cleanEntry.includes(pClean);
+      });
+      if (loose) return loose;
+    }
+
+    return undefined;
+  };
+
+  const handleRetain = (entry: RetentionEntry) => {
+    if (!currentTeam) return;
+    const player = findPlayer(entry);
+    if (!player) return;
+    if (entry.soldPrice > remaining) return;
+    retainPlayer(player.id, currentTeam.id, entry.soldPrice);
+    setConfirmEntry(null);
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-transparent text-white font-sans">
-      <header className="flex-none p-6 border-b border-white/10 relative z-10 flex justify-between items-center bg-black/50 backdrop-blur-md">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#030305] text-white font-sans">
+      {/* Header */}
+      <header className="flex-none px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/50 backdrop-blur-md">
         <div>
           <div className="inline-block bg-[#f27d26] px-3 py-1 text-black font-black text-xs uppercase tracking-widest mb-2">Phase 04</div>
-          <h1 className="text-3xl font-black italic uppercase tracking-tight">Retention Phase</h1>
-          <p className="text-[10px] uppercase text-white/40 tracking-widest mt-1 font-bold">Max {config.maxRetentions} retentions per team. Prices are fixed by tier.</p>
+          <h1 className="text-2xl font-black italic uppercase tracking-tight">Retention Phase</h1>
+          <p className="text-[9px] uppercase text-white/30 tracking-widest mt-0.5 font-bold">
+            Max {config.maxRetentions} retentions per team · Prices from last season's bought price
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <button onClick={() => setStep('import')} className="px-6 py-3 text-white/40 hover:text-white flex items-center gap-2 transition-colors font-bold text-xs uppercase tracking-widest border border-white/10 bg-white/5 cursor-pointer">
-            <ArrowLeft className="w-4 h-4" /> Go Back
+        <div className="flex items-center gap-3">
+          <button onClick={() => setStep('import')} className="px-4 py-2 text-white/40 hover:text-white flex items-center gap-2 transition-colors font-bold text-[10px] uppercase tracking-widest border border-white/10 bg-white/5 cursor-pointer rounded-sm">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
-          <button onClick={() => setStep('auction')} className="px-8 py-3 bg-[#f27d26] hover:bg-[#d96a1a] text-black font-black uppercase tracking-widest transition-colors flex items-center gap-2 cursor-pointer">
-            <Play className="w-4 h-4 fill-current" /> Start Live Auction
+          <button onClick={() => setStep('auction')} className="px-6 py-2 bg-[#f27d26] hover:bg-[#d96a1a] text-black font-black uppercase tracking-widest transition-colors flex items-center gap-2 cursor-pointer rounded-sm text-[11px]">
+            <Play className="w-3.5 h-3.5 fill-current" /> Start Auction
           </button>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Left: Team Selector */}
-        <div className="w-80 border-r border-white/10 bg-black/40 flex flex-col overflow-y-auto hide-scrollbar">
+        <div className="w-72 border-r border-white/10 bg-black/40 flex flex-col overflow-y-auto hide-scrollbar shrink-0">
           {teams.map(team => {
-            const tRetentions = players.filter(p => p.teamId === team.id && p.status === 'retained');
-            const tRemaining = team.startingPurse - team.spent;
+            const tRet = players.filter(p => p.teamId === team.id && p.status === 'retained');
+            const tRem = team.startingPurse - team.spent;
+            const tEntries = retentionData.filter(e => e.soldTo === team.name.toUpperCase()).length;
             return (
               <button key={team.id} onClick={() => setSelectedTeamId(team.id)}
-                className={`p-6 text-left transition-colors border-b border-white/5 relative cursor-pointer ${selectedTeamId === team.id ? 'bg-[#f27d26]/10' : 'hover:bg-white/5'}`}>
+                className={cn('p-4 text-left transition-colors border-b border-white/5 relative cursor-pointer',
+                  selectedTeamId === team.id ? 'bg-[#f27d26]/10' : 'hover:bg-white/5')}>
                 {selectedTeamId === team.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#f27d26]" />}
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-black text-lg uppercase italic tracking-tighter truncate pr-2">{team.name}</h3>
-                  <span className="text-[9px] bg-black px-2 py-1 border border-white/10 font-bold uppercase tracking-widest whitespace-nowrap">
-                    {tRetentions.length}/{config.maxRetentions}
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-6 rounded-sm" style={{ backgroundColor: team.primaryColor }} />
+                    <h3 className="font-bold text-[12px] uppercase tracking-tight truncate pr-2">{team.name}</h3>
+                  </div>
+                  <span className="text-[8px] bg-white/10 px-1.5 py-0.5 font-bold uppercase tracking-widest whitespace-nowrap">
+                    {tRet.length}/{config.maxRetentions}
                   </span>
                 </div>
-                <div className="flex justify-between items-end">
-                  <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Purse</span>
-                  <span className="font-mono text-[#f27d26] font-bold text-lg">{tRemaining} Cr</span>
+                <div className="flex justify-between items-center pl-5">
+                  <span className="text-[9px] text-white/30 font-mono">{tEntries} eligible</span>
+                  <span className="font-mono text-[#f27d26] font-bold text-[12px]">{tRem} Cr</span>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* Center: Available Players */}
-        <div className="flex-1 flex flex-col p-6 overflow-hidden">
-          <div className="relative mb-4 shrink-0">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-            <input type="text" placeholder="Search players..." value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-3 focus:border-[#f27d26] outline-none text-sm placeholder:text-white/40 uppercase tracking-wider font-bold transition-colors" />
+        {/* Center: Eligible Players from CSV */}
+        <div className="flex-1 flex flex-col p-4 overflow-hidden min-h-0">
+          <div className="relative mb-3 shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+            <input type="text" placeholder="Search eligible players..." value={search} onChange={e => setSearch(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 pl-10 pr-4 py-2.5 focus:border-[#f27d26]/50 outline-none text-sm placeholder:text-white/30 font-bold transition-colors rounded-sm" />
           </div>
 
           {!canRetain && (
-            <div className="mb-4 px-4 py-3 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] uppercase tracking-widest font-bold">
-              Maximum retentions reached for {currentTeam?.name}
+            <div className="mb-3 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[9px] uppercase tracking-widest font-bold flex items-center gap-2 rounded-sm">
+              <AlertTriangle className="w-3.5 h-3.5" /> Maximum retentions reached for {currentTeam?.name}
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto hide-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 auto-rows-max">
-            {availablePlayers.map(player => {
-              const canAfford = player.retentionPrice <= remaining;
-              const disabled = !canRetain || !canAfford;
+          <div className="text-[8px] uppercase tracking-widest text-white/25 font-bold mb-2 px-1">
+            {currentTeam?.name} · {filteredEntries.length} players from last season
+          </div>
+
+          <div className="flex-1 overflow-y-auto hide-scrollbar grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 auto-rows-max min-h-0">
+            {filteredEntries.map((entry, idx) => {
+              const retained = isAlreadyRetained(entry);
+              const canAfford = entry.soldPrice <= remaining;
+              const disabled = retained || !canRetain || !canAfford;
+              const matchedPlayer = findPlayer(entry);
+
               return (
-                <div key={player.id} className="bg-white/5 border border-white/10 p-4 flex flex-col gap-3 relative overflow-hidden group hover:border-white/20 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      {player.image && <img src={player.image} alt="" className="w-10 h-10 rounded object-cover bg-white/5" />}
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[8px] font-black px-1.5 py-0.5 rounded" style={{ backgroundColor: TIER_COLORS[player.tier] + '30', color: TIER_COLORS[player.tier] }}>{player.tier}</span>
-                          <span className="text-[9px] text-white/40 uppercase">{player.position}</span>
-                        </div>
-                        <h4 className="font-bold text-sm truncate max-w-[120px]">{player.name}</h4>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-lg font-mono font-bold text-amber-400">{player.retentionPrice}</div>
-                      <div className="text-[8px] text-white/30 uppercase">Cr</div>
+                <div key={idx} className={cn('border rounded-sm p-3 relative transition-all',
+                  retained ? 'bg-emerald-950/20 border-emerald-700/30 opacity-60' : 'bg-white/[0.02] border-white/8 hover:border-white/15')}>
+                  {retained && <div className="absolute top-2 right-2 text-[7px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 font-bold uppercase tracking-widest rounded-sm">Retained</div>}
+                  <div className="flex items-start gap-2.5 mb-2">
+                    {matchedPlayer?.image && (
+                      <img src={matchedPlayer.image} alt="" className="w-9 h-9 rounded-sm object-cover bg-white/5 shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] font-bold truncate leading-tight">{entry.playerName}</div>
+                      <div className="text-[9px] text-white/30 mt-0.5">{entry.position} · Last season</div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-[9px] text-white/40">
-                    <span>{player.country} • {player.rating} OVR</span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-[7px] text-white/20 uppercase">Bought Price</div>
+                      <div className="text-[14px] font-mono font-black text-amber-400 leading-none">{entry.soldPrice} Cr</div>
+                    </div>
+                    {!retained && (
+                      <button onClick={() => setConfirmEntry(entry)} disabled={disabled}
+                        className="px-3 py-1.5 bg-white/5 hover:bg-[#f27d26] hover:text-black border border-white/10 hover:border-[#f27d26] transition-colors font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 disabled:opacity-25 disabled:hover:bg-white/5 disabled:hover:text-white disabled:hover:border-white/10 cursor-pointer rounded-sm">
+                        <ShieldCheck className="w-3 h-3" /> Retain
+                      </button>
+                    )}
                   </div>
-                  <button
-                    onClick={() => setConfirmPlayer(player.id)}
-                    disabled={disabled}
-                    className="w-full py-2.5 bg-white/5 hover:bg-[#f27d26] hover:text-black border border-white/10 hover:border-[#f27d26] transition-colors font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-30 disabled:hover:bg-white/5 disabled:hover:text-white disabled:hover:border-white/10 cursor-pointer"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" /> Retain ({player.retentionPrice} Cr)
-                  </button>
                 </div>
               );
             })}
+            {filteredEntries.length === 0 && (
+              <div className="col-span-full py-12 text-center text-white/15 text-[10px] uppercase tracking-widest italic">
+                {currentTeam ? 'No eligible players found for this team' : 'Select a team'}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right: Retained Players */}
-        <div className="w-72 border-l border-white/10 bg-black/60 flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-white/10">
-            <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Retained</div>
-            <h3 className="font-black text-xl italic uppercase" style={{ color: currentTeam?.primaryColor }}>{currentTeam?.name}</h3>
+        <div className="w-64 border-l border-white/10 bg-black/60 flex flex-col overflow-hidden shrink-0">
+          <div className="p-3 border-b border-white/10">
+            <div className="text-[8px] uppercase tracking-widest text-white/30 font-bold mb-0.5">Retained</div>
+            <h3 className="font-black text-[14px] italic uppercase truncate" style={{ color: currentTeam?.primaryColor }}>{currentTeam?.name}</h3>
+            <div className="text-[9px] font-mono text-white/30 mt-1">
+              Spent: <span className="text-red-400">{currentTeam?.spent || 0} Cr</span> · Left: <span className="text-emerald-400">{remaining} Cr</span>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 hide-scrollbar">
+          <div className="flex-1 overflow-y-auto hide-scrollbar p-2 space-y-1.5">
             <AnimatePresence>
               {teamRetentions.map(player => (
                 <motion.div key={player.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                  className="bg-white/5 border-l-2 p-3" style={{ borderLeftColor: currentTeam?.primaryColor }}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-sm truncate uppercase">{player.name}</span>
-                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded" style={{ backgroundColor: TIER_COLORS[player.tier] + '30', color: TIER_COLORS[player.tier] }}>{player.tier}</span>
+                  className="bg-white/[0.03] border-l-2 p-2.5 rounded-sm" style={{ borderLeftColor: currentTeam?.primaryColor }}>
+                  <div className="flex justify-between items-center mb-0.5">
+                    <span className="font-bold text-[11px] truncate uppercase">{player.name}</span>
+                    <span className="text-[8px] text-white/30">{player.position}</span>
                   </div>
                   <div className="flex justify-between text-[9px]">
-                    <span className="text-white/40">{player.position} • {player.rating}</span>
+                    <span className="text-white/25">Retained for</span>
                     <span className="font-mono text-amber-400 font-bold">{player.soldPrice} Cr</span>
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
             {teamRetentions.length === 0 && (
-              <div className="text-center py-10 text-white/20 text-[10px] uppercase tracking-widest font-bold">No retentions yet</div>
+              <div className="text-center py-8 text-white/15 text-[9px] uppercase tracking-widest italic">No retentions yet</div>
             )}
           </div>
         </div>
       </div>
 
       {/* Confirmation Modal */}
-      {confirmPlayer && (() => {
-        const player = players.find(p => p.id === confirmPlayer);
-        if (!player) return null;
+      {confirmEntry && (() => {
+        const matchedPlayer = findPlayer(confirmEntry);
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-            <div className="bg-[#111] border border-white/10 max-w-sm w-full shadow-2xl">
-              <div className="flex justify-between items-center p-4 border-b border-white/10">
-                <h3 className="font-black italic uppercase tracking-widest">Confirm Retention</h3>
-                <button onClick={() => setConfirmPlayer(null)} className="text-white/40 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-[#0a0a0f] border border-white/10 max-w-sm w-full shadow-2xl rounded-lg overflow-hidden">
+              <div className="flex justify-between items-center px-5 py-3 border-b border-white/10">
+                <h3 className="font-black italic uppercase tracking-widest text-sm">Confirm Retention</h3>
+                <button onClick={() => setConfirmEntry(null)} className="text-white/40 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
               </div>
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  {player.image && <img src={player.image} alt="" className="w-16 h-16 rounded object-cover bg-white/5" />}
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-5">
+                  {matchedPlayer?.image && <img src={matchedPlayer.image} alt="" className="w-14 h-14 rounded object-cover bg-white/5" />}
                   <div>
-                    <div className="text-xl font-black uppercase italic">{player.name}</div>
-                    <div className="text-[10px] text-white/40 uppercase tracking-widest">{player.position} • {player.country} • {player.rating} OVR</div>
+                    <div className="text-lg font-black uppercase italic">{confirmEntry.playerName}</div>
+                    <div className="text-[9px] text-white/30 uppercase tracking-widest">{confirmEntry.position} · Last Season</div>
                   </div>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-4 mb-6 flex justify-between items-center">
-                  <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Retention Price</span>
-                  <span className="text-2xl font-mono font-black text-amber-400">{player.retentionPrice} Cr</span>
-                </div>
-                <div className="text-[10px] text-white/40 uppercase tracking-widest mb-6">
-                  Team: <span className="text-white font-bold">{currentTeam?.name}</span> • Purse after: <span className="text-[#f27d26] font-bold">{remaining - player.retentionPrice} Cr</span>
+                <div className="bg-white/5 border border-white/10 p-4 mb-5 rounded-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Retention Cost (Bought Price)</span>
+                    <span className="text-2xl font-mono font-black text-amber-400">{confirmEntry.soldPrice} Cr</span>
+                  </div>
+                  <div className="text-[9px] text-white/30">
+                    Team: <span className="text-white/60 font-bold">{currentTeam?.name}</span> · Purse after: <span className="text-emerald-400 font-bold">{remaining - confirmEntry.soldPrice} Cr</span>
+                  </div>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setConfirmPlayer(null)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-xs uppercase tracking-widest transition-colors cursor-pointer">Cancel</button>
-                  <button onClick={() => handleRetain(player.id)} className="flex-1 py-3 bg-[#f27d26] hover:bg-[#d96a1a] text-black font-black text-xs uppercase tracking-widest transition-colors cursor-pointer">Confirm</button>
+                  <button onClick={() => setConfirmEntry(null)} className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-[10px] uppercase tracking-widest cursor-pointer rounded-sm">Cancel</button>
+                  <button onClick={() => handleRetain(confirmEntry)} disabled={!findPlayer(confirmEntry)} className="flex-1 py-2.5 bg-[#f27d26] hover:bg-[#d96a1a] text-black font-black text-[10px] uppercase tracking-widest cursor-pointer rounded-sm disabled:opacity-30">Confirm</button>
                 </div>
               </div>
             </div>
