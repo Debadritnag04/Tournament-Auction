@@ -22,7 +22,7 @@ function getNextBidAmount(currentBid: number): number {
 
 export default function LiveAuction() {
   const {
-    players, teams, config, currentPot,
+    players, teams, config, currentPot, history,
     currentPlayerId, currentBid, currentLeadingTeamId, timer,
     setStep, setCurrentPot,
     startAuctionForPlayer, placeBid, sellPlayer, markUnsold, tickTimer, revivePlayers,
@@ -30,6 +30,7 @@ export default function LiveAuction() {
 
   const [showTeamView, setShowTeamView] = useState(false);
   const [showRevive, setShowRevive] = useState(false);
+  const [showAdvisor, setShowAdvisor] = useState(false);
   const [selectedToRevive, setSelectedToRevive] = useState<Set<string>>(new Set());
   const [reviveSearch, setReviveSearch] = useState('');
   const [search, setSearch] = useState('');
@@ -115,9 +116,12 @@ export default function LiveAuction() {
           ))}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[7px] font-mono text-white/20 mr-1">S:{players.filter(p => p.status === 'sold').length} U:{players.filter(p => p.status === 'unsold').length}</span>
+          <span className="text-[8px] font-bold mr-1 flex items-center gap-1.5"><span className="text-emerald-400">S:{players.filter(p => p.status === 'sold').length}</span><span className="text-red-400">U:{players.filter(p => p.status === 'unsold').length}</span></span>
           <button onClick={() => setShowTeamView(true)} className="px-2 py-0.5 bg-white/5 border border-white/8 text-[8px] font-bold uppercase tracking-wider hover:bg-white/10 cursor-pointer rounded-sm flex items-center gap-1">
             <Eye className="w-2.5 h-2.5" />Squads
+          </button>
+          <button onClick={() => setShowAdvisor(true)} className="px-2 py-0.5 bg-purple-950/50 border border-purple-700/30 text-[8px] font-bold uppercase tracking-wider text-purple-400 hover:bg-purple-900/40 cursor-pointer rounded-sm flex items-center gap-1">
+            <Brain className="w-2.5 h-2.5" />Advisor
           </button>
           <button onClick={() => setStep('results')} className="px-2 py-0.5 bg-red-950/50 border border-red-900/30 text-[8px] font-bold uppercase tracking-wider text-red-400 hover:bg-red-900/40 cursor-pointer rounded-sm">End</button>
           {unsoldPlayers.length > 0 && (
@@ -127,6 +131,21 @@ export default function LiveAuction() {
           )}
         </div>
       </header>
+
+      {/* ── BUDGET TICKER ── */}
+      <div className="relative z-10 shrink-0 h-6 bg-black/80 border-b border-white/5 overflow-hidden">
+        <div className="budget-ticker flex items-center h-full whitespace-nowrap">
+          {[...teams, ...teams].map((team, i) => {
+            const remaining = team.startingPurse - team.spent;
+            return (
+              <span key={`${team.id}-${i}`} className="inline-flex items-center gap-1.5 mx-4">
+                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#D4A017' }}>{team.shortName}</span>
+                <span className="text-[10px] font-mono font-bold" style={{ color: '#C0C0C0' }}>{remaining} Cr</span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
 
       {/* ── MAIN GRID ── */}
       <main className="relative z-10 flex-1 min-h-0 grid gap-1.5 p-1.5 overflow-hidden" style={{ gridTemplateColumns: '17% 1fr 22%' }}>
@@ -286,12 +305,12 @@ export default function LiveAuction() {
           )}
         </div>
 
-        {/* ── RIGHT: Purse + Advisor + Sales ── */}
-        <div className="grid overflow-hidden min-h-0" style={{ gridTemplateRows: '40% 1fr 20%', gap: '6px' }}>
+        {/* ── RIGHT: Purse + Sales ── */}
+        <div className="grid overflow-hidden min-h-0" style={{ gridTemplateRows: '1fr 35%', gap: '6px' }}>
           {/* Purse Standings */}
           <div className="bg-white/[0.015] border border-white/[0.04] rounded flex flex-col overflow-hidden min-h-0">
             <div className="px-2 py-1 border-b border-white/[0.04] text-[7px] uppercase font-bold tracking-widest text-white/25 flex items-center gap-1 shrink-0">
-              <Users className="w-2.5 h-2.5" /> Purse
+              <Users className="w-2.5 h-2.5" /> Purse Standings
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar p-1 space-y-0.5">
               {[...teams].sort((a, b) => (b.startingPurse - b.spent) - (a.startingPurse - a.spent)).map(team => {
@@ -301,13 +320,15 @@ export default function LiveAuction() {
                 const isLow = rem < 50;
                 const barColor = pct > 50 ? '#10b981' : pct > 25 ? '#f59e0b' : '#ef4444';
                 return (
-                  <div key={team.id} className={cn('border rounded-sm px-1.5 py-1 transition-all cursor-pointer',
-                    advisorTeamId === team.id ? 'border-purple-500/40 bg-purple-500/5' : isLow ? 'bg-red-950/20 border-red-900/30' : 'bg-white/[0.02] border-white/[0.04]')}
-                    onClick={() => setAdvisorTeamId(team.id)}>
+                  <div key={team.id} className={cn('border rounded-sm px-1.5 py-1 transition-all',
+                    isLow ? 'bg-red-950/20 border-red-900/30' : 'bg-white/[0.02] border-white/[0.04]')}>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1 h-4 rounded-sm shrink-0" style={{ backgroundColor: team.primaryColor }} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-[8px] font-bold truncate leading-tight">{team.shortName}</div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-[8px] font-bold truncate leading-tight">{team.shortName}</div>
+                          <span className="text-[7px] text-white/20 font-mono">{sq} players</span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[9px] font-mono font-bold text-white/50">{team.spent}</span>
@@ -325,47 +346,78 @@ export default function LiveAuction() {
             </div>
           </div>
 
-          {/* Squad Advisor */}
-          <div className="min-h-0 overflow-hidden">
-            {advisorTeamId ? (
-              <SquadAdvisor teamId={advisorTeamId} />
-            ) : (
-              <div className="h-full bg-white/[0.015] border border-white/[0.04] rounded flex items-center justify-center">
-                <div className="text-center px-3">
-                  <Brain className="w-3.5 h-3.5 text-purple-400/40 mx-auto mb-1" />
-                  <p className="text-[7px] text-white/20 uppercase tracking-widest">Click a team for suggestions</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sales History */}
+          {/* Last 5 Sales */}
           <div className="bg-white/[0.015] border border-white/[0.04] rounded flex flex-col overflow-hidden min-h-0">
-            <div className="px-2 py-0.5 border-b border-white/[0.04] text-[7px] uppercase font-bold tracking-widest text-white/25 flex items-center gap-1 shrink-0">
-              <Trophy className="w-2.5 h-2.5" /> Sales
+            <div className="px-2 py-1 border-b border-white/[0.04] text-[7px] uppercase font-bold tracking-widest text-white/25 flex items-center gap-1 shrink-0">
+              <Trophy className="w-2.5 h-2.5" /> Last 5 Sales
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar p-1 space-y-px">
-              {players.filter(p => p.status === 'sold').slice(-10).reverse().map(p => {
-                const t = teams.find(t => t.id === p.teamId);
-                return (
-                  <div key={p.id} className="flex items-center justify-between text-[8px] py-px px-1 border-b border-white/[0.02] last:border-0">
-                    <div className="flex items-center gap-1 min-w-0">
-                      <div className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: t?.primaryColor || '#666' }} />
-                      <span className="truncate text-white/60">{p.name}</span>
+            <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar p-1 space-y-0.5">
+              {(() => {
+                // Get sold players ordered by their last bid timestamp (actual sale order)
+                const soldPlayers = players.filter(p => p.status === 'sold');
+                // Find the last bid for each sold player to determine sale order
+                const soldWithTime = soldPlayers.map(p => {
+                  const lastBid = [...history].reverse().find(h => h.playerId === p.id);
+                  return { ...p, soldAt: lastBid?.timestamp || '' };
+                }).sort((a, b) => b.soldAt.localeCompare(a.soldAt));
+                const lastFive = soldWithTime.slice(0, 5);
+                return lastFive.length > 0 ? lastFive.map((p, idx) => {
+                  const t = teams.find(t => t.id === p.teamId);
+                  return (
+                    <div key={p.id} className={cn('flex items-center justify-between text-[9px] py-1 px-1.5 border border-white/[0.03] rounded-sm', idx === 0 ? 'bg-emerald-950/20 border-emerald-700/20' : 'bg-white/[0.02]')}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t?.primaryColor || '#666' }} />
+                        <span className="truncate text-white/70 font-medium">{p.name}</span>
+                        <span className="text-[7px] text-white/25 shrink-0">→ {t?.shortName}</span>
+                      </div>
+                      <span className="font-mono font-bold text-emerald-400 shrink-0 ml-1.5">{p.soldPrice} Cr</span>
                     </div>
-                    <span className="font-mono font-bold text-emerald-400 shrink-0 ml-1">{p.soldPrice}</span>
-                  </div>
+                  );
+                }) : (
+                  <div className="text-[8px] text-white/12 text-center mt-4 italic">No sales yet</div>
                 );
-              })}
-              {players.filter(p => p.status === 'sold').length === 0 && (
-                <div className="text-[8px] text-white/12 text-center mt-2 italic">No sales yet</div>
-              )}
+              })()}
             </div>
           </div>
         </div>
       </main>
 
       {showTeamView && <TeamView onClose={() => setShowTeamView(false)} />}
+
+      {/* Squad Advisor Full Screen */}
+      {showAdvisor && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
+            <div className="flex items-center gap-3">
+              <Brain className="w-5 h-5 text-purple-400" />
+              <h2 className="text-base font-black italic uppercase tracking-widest">Squad Advisor</h2>
+              <p className="text-[9px] text-white/30 uppercase tracking-widest">AI-powered team recommendations</p>
+            </div>
+            <button onClick={() => setShowAdvisor(false)} className="text-white/40 hover:text-white cursor-pointer p-1"><X className="w-5 h-5" /></button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto p-5">
+            {/* Team selector */}
+            <div className="flex flex-wrap gap-2 mb-5">
+              {teams.map(team => (
+                <button key={team.id} onClick={() => setAdvisorTeamId(team.id)}
+                  className={cn('px-3 py-1.5 border rounded-sm text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5',
+                    advisorTeamId === team.id ? 'border-purple-500/60 bg-purple-500/10 text-purple-300' : 'border-white/8 bg-white/[0.02] text-white/50 hover:border-white/20')}>
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: team.primaryColor }} />
+                  {team.shortName}
+                </button>
+              ))}
+            </div>
+            {advisorTeamId ? (
+              <SquadAdvisor teamId={advisorTeamId} />
+            ) : (
+              <div className="text-center py-20">
+                <Brain className="w-8 h-8 text-purple-400/30 mx-auto mb-3" />
+                <p className="text-[10px] text-white/25 uppercase tracking-widest">Select a team above to get AI recommendations</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Revive Unsold Modal */}
       {showRevive && (

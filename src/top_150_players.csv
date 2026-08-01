@@ -122,7 +122,7 @@ O. Dembélé,https://cdn.sofifa.net/players/231/443/23_60.png,3 Cr,C,RW,France,8
 A. Griezmann,https://cdn.sofifa.net/players/194/765/23_60.png,3 Cr,C,ST,France,83,4 Cr
 V. Osimhen,https://cdn.sofifa.net/players/232/293/23_60.png,3 Cr,C,ST,Nigeria,83,4 Cr
 Bremer,https://cdn.sofifa.net/players/239/580/23_60.png,3 Cr,C,CB,Brazil,83,4 Cr
-G. Kobel,https://cdn.sofifa.net/players/235/073/23_60.png,3 Cr,C,GK,Switzerland,83,4 Cr
+G. Kobel,https://cdn.sofifa.net/players/235/073/23_60.png,3 Cr,C,GK,Switzerland,85,4 Cr
 S. Coates,https://cdn.sofifa.net/players/200/731/23_60.png,3 Cr,C,CB,Uruguay,84,4 Cr
 R. Guerreiro,https://cdn.sofifa.net/players/213/345/23_60.png,3 Cr,C,LB,Portugal,84,4 Cr
 A. Grimaldo,https://cdn.sofifa.net/players/222/492/23_60.png,3 Cr,C,LB,Spain,84,4 Cr
@@ -132,7 +132,7 @@ O. Giroud,https://cdn.sofifa.net/players/182/521/23_60.png,3 Cr,C,ST,France,84,4
 Emre Can,https://cdn.sofifa.net/players/210/257/23_60.png,3 Cr,C,CDM,Germany,84,4 Cr
 M. Asensio,https://cdn.sofifa.net/players/211/117/23_60.png,3 Cr,C,CAM,Spain,84,4 Cr
 C. Gakpo,https://cdn.sofifa.net/players/246/388/23_60.png,3 Cr,C,LW,Netherlands,84,4 Cr
-J. Cuadrado,https://cdn.sofifa.net/players/190/460/23_60.png,3 Cr,C,RB,Colombia,84,4 Cr
+J. Cuadrado,https://cdn.sofifa.net/players/190/460/23_60.png,3 Cr,C,RB,Colombia,81,2 Cr
 F. Mendy,https://cdn.sofifa.net/players/240/003/23_60.png,3 Cr,C,LB,France,84,4 Cr
 Jesus Navas,https://cdn.sofifa.net/players/176/580/23_60.png,3 Cr,C,RB,Spain,83,4 Cr
 L. Insigne,https://cdn.sofifa.net/players/192/366/23_60.png,3 Cr,C,LW,Italy,84,4 Cr
@@ -143,11 +143,6 @@ B. Saka,https://cdn.sofifa.net/players/246/669/23_60.png,1 Cr,D,RM,England,82,2 
 A. Tchouaméni,https://cdn.sofifa.net/players/241/637/23_60.png,1 Cr,D,CM,France,82,2 Cr
 S. Obisanya,https://cdn.sofifa.net/players/269/765/23_60.png,1 Cr,D,RM,Nigeria,81,2 Cr
 Rodrygo,https://cdn.sofifa.net/players/243/812/23_60.png,1 Cr,D,RW,Brazil,81,2 Cr
-W. Saliba,https://cdn.sofifa.net/players/243/715/23_60.png,1 Cr,D,CB,France,80,2 Cr
-G. Xhaka,https://cdn.sofifa.net/players/199/503/23_60.png,1 Cr,D,CDM,Switzerland,79,2 Cr
-Kim Min Jae,https://cdn.sofifa.net/players/237/086/23_60.png,1 Cr,D,CB,Korea Republic,79,2 Cr
-L. Openda,https://cdn.sofifa.net/players/243/580/23_60.png,1 Cr,D,ST,Belgium,75,2 Cr
-M. van de Ven,https://cdn.sofifa.net/players/264/453/23_60.png,1 Cr,D,CB,Netherlands,69,2 Cr
 R. Lewandowski,https://cdn.sofifa.net/players/188/545/23_60.png,15 Cr,S,ST,Poland,91,18 Cr
 K. Mbappé,https://cdn.sofifa.net/players/231/747/23_60.png,15 Cr,S,ST,France,91,18 Cr
 K. Benzema,https://cdn.sofifa.net/players/165/153/23_60.png,15 Cr,S,CF,France,91,18 Cr
@@ -173,4 +168,35 @@ Ansu Fati,https://cdn.sofifa.net/players/253/004/23_60.png,1 Cr,D,LW,Spain,79,2 
 Ángel Correa,https://cdn.sofifa.net/players/214/997/23_60.png,3 Cr,C,ST,Argentina,83,4 Cr
 Darwin Núñez,https://cdn.sofifa.net/players/238/955/23_60.png,6 Cr,B,ST,Uruguay,82,8 Cr
 
-Gabriel Jesus,https://cdn.sofifa.net/players/228/188/23_60.png,3 Cr,C,ST,Brazil,83,4 Cr
+Gabriel Jesus,https://cdn.sofifa.net/players/228/188/23_60.png,3 Cr,C,ST,Brazil,82,4 Cr
+P. Sarabia,https://cdn.sofifa.net/players/198/235/23_60.png,3 Cr,C,RW,Spain,81,4 Cr
+R. De Tomas,https://cdn.sofifa.net/players/224/855/23_60.png,3 Cr,C,ST,Spain,82,4 Cr
+N. Mazraoui,https://cdn.sofifa.net/players/233/428/23_60.png,3 Cr,C,RB,Morocco,81,4 Cr
+Yuri Berchiche,https://cdn.sofifa.net/players/198/142/23_60.png,3 Cr,C,LB,Spain,82,4 Cr
+D. Tadić,https://cdn.sofifa.net/players/194/037/23_60.png,3 Cr,C,LW,Serbia,84,4 Cr
+D. Rojas,https://cdn.sofifa.net/players/269/763/23_60.png,1 Cr,D,CF,Mexico,84,4 Cr
+R. Kent,https://cdn.sofifa.net/players/269/762/23_60.png,3 Cr,C,CDM,England,85,6 Cr
+G. Simeone,https://cdn.sofifa.net/players/246/126/23_60.png,3 Cr,C,ST,Argentina,83,4 Cr
+
+J. Grealish,https://cdn.sofifa.net/players/220/440/23_60.png,3 Cr,C,LW,England,84,4 Cr
+M. Kovačić,https://cdn.sofifa.net/players/203/318/23_60.png,3 Cr,C,CM,Croatia,84,4 Cr
+T. Partey,https://cdn.sofifa.net/players/215/766/23_60.png,3 Cr,C,CDM,Ghana,84,4 Cr
+David Silva,https://cdn.sofifa.net/players/168/542/23_60.png,6 Cr,B,CAM,Spain,83,2 Cr
+T. Lemar,https://cdn.sofifa.net/players/222/492/23_60.png,3 Cr,C,LM,France,84,4 Cr
+
+K. Laimer,https://cdn.sofifa.net/players/224/509/23_60.png,3 Cr,C,CDM,Austria,83,2 Cr
+
+McAdoo,https://cdn.sofifa.net/players/269/764/23_60.png,3 Cr,C,CB,England,84,4 Cr
+
+D. Dumfries,https://cdn.sofifa.net/players/232/866/23_60.png,1 Cr,D,RB,Netherlands,82,2 Cr
+A. Rabiot,https://cdn.sofifa.net/players/227/734/23_60.png,1 Cr,D,CM,France,82,2 Cr
+P. Højbjerg,https://cdn.sofifa.net/players/219/416/23_60.png,3 Cr,C,CDM,Denmark,84,4 Cr
+D. Upamecano,https://cdn.sofifa.net/players/239/626/23_60.png,3 Cr,C,CB,France,83,4 Cr
+M. Rashford,https://cdn.sofifa.net/players/231/677/23_60.png,3 Cr,C,LW,England,83,4 Cr
+Pau Torres,https://cdn.sofifa.net/players/240/124/23_60.png,3 Cr,C,CB,Spain,83,4 Cr
+I. Rakitić,https://cdn.sofifa.net/players/184/444/23_60.png,1 Cr,D,CM,Croatia,82,2 Cr
+P. Kimpembe,https://cdn.sofifa.net/players/229/436/23_60.png,3 Cr,C,CB,France,83,4 Cr
+
+J. Stones,https://cdn.sofifa.net/players/203/574/23_60.png,3 Cr,C,CB,England,84,4 Cr
+
+Y. Bounou,https://cdn.sofifa.net/players/209/981/23_60.png,3 Cr,C,GK,Morocco,84,4 Cr

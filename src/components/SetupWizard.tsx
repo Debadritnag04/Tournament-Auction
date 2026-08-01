@@ -20,11 +20,13 @@ const DEFAULT_TEAMS = [
   { name: 'Dakshineshwar Deltas', shortName: 'DKD', primaryColor: '#B7472A', secondaryColor: '#5C6B7A', owner: 'Sumit', logo: logoSumit, purse: 202 },
   { name: 'Ichapur Invincibles', shortName: 'ICI', primaryColor: '#2952CC', secondaryColor: '#D4A017', owner: 'Dwipayan', logo: logoDwipayan, purse: 222 },
   { name: 'Krishnanagar City Junction FC', shortName: 'KCJ', primaryColor: '#1B2A4A', secondaryColor: '#D4A017', owner: 'Debdip', logo: logoDebdip, purse: 228 },
+  { name: 'Thunderbolts FC', shortName: 'TFC', primaryColor: '#FACC15', secondaryColor: '#1E293B', owner: '', logo: undefined, purse: 200 },
+  { name: 'Majhi FC', shortName: 'MFC', primaryColor: '#0EA5E9', secondaryColor: '#0F172A', owner: '', logo: undefined, purse: 200 },
 ];
 
 export default function SetupWizard() {
   const { config, updateConfig, setStep, setTeams, setAuctionMode, auctionMode } = useStore();
-  const [numTeams, setNumTeams] = useState(7);
+  const [numTeams, setNumTeams] = useState(9);
   const [globalPurse, setGlobalPurse] = useState(200);
   const [useCustomPurse, setUseCustomPurse] = useState(false);
   const [customPurses, setCustomPurses] = useState<number[]>(
@@ -43,7 +45,9 @@ export default function SetupWizard() {
   const handleNext = () => {
     const initialTeams = Array.from({ length: numTeams }).map((_, i) => {
       const preset = DEFAULT_TEAMS[i];
-      const purse = useCustomPurse ? ensuredPurses[i] : (preset ? preset.purse : globalPurse);
+      // Custom Purse OFF → everyone gets globalPurse (200 Cr default)
+      // Custom Purse ON → use the individual custom purse values
+      const purse = useCustomPurse ? ensuredPurses[i] : globalPurse;
       if (preset) {
         return {
           id: crypto.randomUUID(),

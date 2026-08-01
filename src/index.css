@@ -20,3 +20,17 @@ html, body, #root {
     display: none;
   }
 }
+
+/* Budget ticker continuous scroll animation */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.budget-ticker {
+  animation: ticker-scroll 20s linear infinite;
+}
+
+.budget-ticker:hover {
+  animation-play-state: paused;
+}
