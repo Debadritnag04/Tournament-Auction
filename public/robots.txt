@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tournament-auction-five.vercel.app/sitemap.xml

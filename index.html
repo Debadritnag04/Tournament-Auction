@@ -3,14 +3,94 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Football Mega Auction</title>
+
+    <!-- Primary Meta Tags -->
+    <title>Football Mega Auction | Live Fantasy Football Auction Platform</title>
+    <meta name="title" content="Football Mega Auction | Live Fantasy Football Auction Platform" />
+    <meta name="description" content="Host live football mega auctions with real-time bidding, position-based pots (GK, DEF, MID, ATT), tiered players (S/A/B/C/D), multi-season support, retentions, and cinematic presentation. Free online auction tool for fantasy football leagues." />
+    <meta name="keywords" content="football auction, fantasy football auction, mega auction, mini auction, live bidding, player auction, football draft, fantasy league auction, IPL style auction, football manager, squad builder, auction platform, retention auction, football tournament" />
+    <meta name="author" content="Tournament Auction" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://tournament-auction-five.vercel.app/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tournament-auction-five.vercel.app/" />
+    <meta property="og:title" content="Football Mega Auction | Live Fantasy Football Auction Platform" />
+    <meta property="og:description" content="Cinematic live auction experience with position-based pots, 200 Cr purse, S/A/B/C/D tier system. Host your own football mega auction online — free, fast, and feature-rich." />
+    <meta property="og:image" content="https://tournament-auction-five.vercel.app/og-image.png" />
+    <meta property="og:site_name" content="Football Mega Auction" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://tournament-auction-five.vercel.app/" />
+    <meta property="twitter:title" content="Football Mega Auction | Live Fantasy Football Auction Platform" />
+    <meta property="twitter:description" content="Host live football mega auctions with real-time bidding, tiered players, multi-season support, and cinematic presentation. Free online tool." />
+    <meta property="twitter:image" content="https://tournament-auction-five.vercel.app/og-image.png" />
+
+    <!-- Theme & PWA -->
+    <meta name="theme-color" content="#f27d26" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mega Auction" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Football Mega Auction",
+      "url": "https://tournament-auction-five.vercel.app/",
+      "description": "A live football auction platform with real-time bidding, position-based pots, tiered player system, multi-season support with retentions, and cinematic presentation.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Real-time live bidding",
+        "Position-based pot system (GK, DEF, MID, ATT)",
+        "S/A/B/C/D tier player classification",
+        "Multi-season tournament support",
+        "Mega and Mini auction modes",
+        "Player retention system",
+        "Squad advisor with AI recommendations",
+        "PDF export of auction results",
+        "Team purse management",
+        "Auction history and analytics"
+      ],
+      "screenshot": "https://tournament-auction-five.vercel.app/og-image.png",
+      "author": {
+        "@type": "Organization",
+        "name": "Tournament Auction"
+      }
+    }
+    </script>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-black text-white">
+    <!-- Noscript fallback for SEO crawlers -->
+    <noscript>
+      <div style="padding: 2rem; text-align: center; color: white; background: #030305;">
+        <h1>Football Mega Auction</h1>
+        <p>A live football auction platform for hosting mega auctions and mini auctions with real-time bidding, player retention, and multi-season tournament support.</p>
+        <p>Features: Position-based pots (GK, DEF, MID, ATT), S/A/B/C/D tier system, 200 Cr starting purse, team management, auction history, and PDF export.</p>
+        <p>Please enable JavaScript to use this application.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

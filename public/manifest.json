@@ -1,0 +1,21 @@
+{
+  "name": "Football Mega Auction",
+  "short_name": "Mega Auction",
+  "description": "Live football auction platform with real-time bidding, position pots, tiered players, and multi-season support.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030305",
+  "theme_color": "#f27d26",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
