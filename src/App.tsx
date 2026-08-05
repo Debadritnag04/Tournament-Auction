@@ -15,21 +15,21 @@ import Results from './components/Results';
 
 export default function App() {
   const step = useStore(state => state.step);
-  const loadState = useStore(state => state.loadState);
+  const checkSavedAuction = useStore(state => state.checkSavedAuction);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount: attempt to restore persisted auction state from Supabase
+  // On mount: check if a saved auction exists (but do NOT navigate away from landing)
   useEffect(() => {
-    loadState().finally(() => setIsLoading(false));
-  }, [loadState]);
+    checkSavedAuction().finally(() => setIsLoading(false));
+  }, [checkSavedAuction]);
 
-  // Show loading spinner while restoring state
+  // Show loading spinner while checking state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#020203] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-[#f27d26] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Loading auction state...</p>
+          <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Loading...</p>
         </div>
       </div>
     );
@@ -59,4 +59,3 @@ export default function App() {
     </div>
   );
 }
-

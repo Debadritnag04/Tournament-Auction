@@ -49,7 +49,10 @@ interface AppState {
 
   // Persistence Actions
   loadState: () => Promise<boolean>;
+  checkSavedAuction: () => Promise<void>;
+  continueAuction: () => Promise<boolean>;
   resetForNewAuction: () => Promise<void>;
+  hasSavedAuction: boolean;
 }
 
 const DEFAULT_CONFIG: AuctionConfig = {
@@ -169,7 +172,20 @@ export const useStore = create<AppState>((set, get) => ({
   tickTimer: () => set((s) => ({ timer: Math.max(0, s.timer - 1) })),
   resetTimer: () => set((s) => ({ timer: s.config.autoTimer })),
 
-  // Persistence: Load state from Supabase
+  // Flag: whether a saved auction exists in DB
+  hasSavedAuction: false,
+
+  // Persistence: Check if saved auction exists (does NOT navigate away from landing)
+  checkSavedAuction: async () => {
+    const saved = await loadAuctionState();
+    if (saved && saved.players && saved.players.length > 0) {
+      set({ hasSavedAuction: true });
+    } else {
+      set({ hasSavedAuction: false });
+    }
+  },
+
+  // Persistence: Load and navigate into the saved auction
   loadState: async () => {
     const saved = await loadAuctionState();
     if (saved && saved.players && saved.players.length > 0) {
@@ -181,14 +197,40 @@ export const useStore = create<AppState>((set, get) => ({
         players: saved.players || [],
         history: saved.history || [],
         currentPot: (saved.currentPot as AuctionPot) || 'GK',
-        currentPlayerId: null, // Don't restore mid-bid state (timer-sensitive)
+        currentPlayerId: null,
         currentBid: 0,
         currentLeadingTeamId: null,
         timer: 0,
+        hasSavedAuction: true,
       });
-      return true; // State was restored
+      return true;
     }
-    return false; // No saved state
+    return false;
+  },
+
+  // Persistence: Continue auction — restores full state and navigates to saved step
+  continueAuction: async () => {
+    const saved = await loadAuctionState();
+    if (saved && saved.players && saved.players.length > 0) {
+      // Determine which step to resume at
+      const resumeStep = (saved.step === 'landing' ? 'auction' : saved.step) as AppStep;
+      set({
+        step: resumeStep,
+        config: saved.config || DEFAULT_CONFIG,
+        auctionMode: saved.auctionMode as AuctionMode,
+        teams: saved.teams || [],
+        players: saved.players || [],
+        history: saved.history || [],
+        currentPot: (saved.currentPot as AuctionPot) || 'GK',
+        currentPlayerId: null, // Don't restore mid-bid (timer-sensitive)
+        currentBid: 0,
+        currentLeadingTeamId: null,
+        timer: 0,
+        hasSavedAuction: true,
+      });
+      return true;
+    }
+    return false;
   },
 
   // Persistence: Clear state for new auction
@@ -206,6 +248,7 @@ export const useStore = create<AppState>((set, get) => ({
       currentBid: 0,
       currentLeadingTeamId: null,
       timer: 0,
+      hasSavedAuction: false,
     });
   },
 }));
@@ -214,9 +257,11 @@ export const useStore = create<AppState>((set, get) => ({
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 useStore.subscribe((state) => {
-  // Only save if there's meaningful data (players loaded = auction in progress)
+  // Only save if there's meaningful data (players loaded = auction exists)
   if (state.players.length === 0) return;
-  // Don't save timer ticks (too frequent), debounce at 1 second
+  // Don't persist while on landing page (prevents overwriting with stale state)
+  if (state.step === 'landing') return;
+  // Debounce saves at 1 second to avoid excessive writes (timer ticks)
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     const { step, config, auctionMode, teams, players, history, currentPot,
@@ -227,3 +272,32 @@ useStore.subscribe((state) => {
     });
   }, 1000);
 });
+
+// Save on tab close / browser refresh
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    const state = useStore.getState();
+    if (state.players.length === 0 || state.step === 'landing') return;
+    const { step, config, auctionMode, teams, players, history, currentPot,
+      currentPlayerId, currentBid, currentLeadingTeamId, timer } = state;
+    // Use navigator.sendBeacon for reliable last-second save
+    const payload = JSON.stringify({
+      id: 'current',
+      state: { step, config, auctionMode, teams, players, history, currentPot,
+        currentPlayerId, currentBid, currentLeadingTeamId, timer },
+      updated_at: new Date().toISOString(),
+    });
+    // Fallback: synchronous save attempt via fetch keepalive
+    fetch(`${import.meta.env.VITE_SUPABASE_URL || 'https://njsrjpkkerwwsqucoujl.supabase.co'}/rest/v1/auction_state?on_conflict=id`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qc3JqcGtrZXJ3d3NxdWNvdWpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTU1NDEsImV4cCI6MjA5NzMzMTU0MX0.GCNgwAal_XQTmbMlLAck4ocIefCjYPcGBPuFKJdusI8',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qc3JqcGtrZXJ3d3NxdWNvdWpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTU1NDEsImV4cCI6MjA5NzMzMTU0MX0.GCNgwAal_XQTmbMlLAck4ocIefCjYPcGBPuFKJdusI8'}`,
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {});
+  });
+}
