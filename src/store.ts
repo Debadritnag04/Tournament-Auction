@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Player, Team, AuctionConfig, BidHistory, AppStep, AuctionPot, AuctionMode } from './types';
+import { saveAuctionState, loadAuctionState, clearAuctionState, PersistedState } from './lib/persistence';
 
 // Bid increment logic per spec
 function getNextBid(currentBid: number): number {
@@ -45,6 +46,10 @@ interface AppState {
   revivePlayers: (playerIds: string[]) => void;
   tickTimer: () => void;
   resetTimer: () => void;
+
+  // Persistence Actions
+  loadState: () => Promise<boolean>;
+  resetForNewAuction: () => Promise<void>;
 }
 
 const DEFAULT_CONFIG: AuctionConfig = {
@@ -163,4 +168,62 @@ export const useStore = create<AppState>((set, get) => ({
 
   tickTimer: () => set((s) => ({ timer: Math.max(0, s.timer - 1) })),
   resetTimer: () => set((s) => ({ timer: s.config.autoTimer })),
+
+  // Persistence: Load state from Supabase
+  loadState: async () => {
+    const saved = await loadAuctionState();
+    if (saved && saved.players && saved.players.length > 0) {
+      set({
+        step: saved.step as AppStep,
+        config: saved.config || DEFAULT_CONFIG,
+        auctionMode: saved.auctionMode as AuctionMode,
+        teams: saved.teams || [],
+        players: saved.players || [],
+        history: saved.history || [],
+        currentPot: (saved.currentPot as AuctionPot) || 'GK',
+        currentPlayerId: null, // Don't restore mid-bid state (timer-sensitive)
+        currentBid: 0,
+        currentLeadingTeamId: null,
+        timer: 0,
+      });
+      return true; // State was restored
+    }
+    return false; // No saved state
+  },
+
+  // Persistence: Clear state for new auction
+  resetForNewAuction: async () => {
+    await clearAuctionState();
+    set({
+      step: 'setup',
+      config: DEFAULT_CONFIG,
+      auctionMode: 'mini',
+      teams: [],
+      players: [],
+      history: [],
+      currentPot: 'GK',
+      currentPlayerId: null,
+      currentBid: 0,
+      currentLeadingTeamId: null,
+      timer: 0,
+    });
+  },
 }));
+
+// Auto-save: Subscribe to store changes and persist to Supabase
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+useStore.subscribe((state) => {
+  // Only save if there's meaningful data (players loaded = auction in progress)
+  if (state.players.length === 0) return;
+  // Don't save timer ticks (too frequent), debounce at 1 second
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    const { step, config, auctionMode, teams, players, history, currentPot,
+      currentPlayerId, currentBid, currentLeadingTeamId, timer } = state;
+    saveAuctionState({
+      step, config, auctionMode, teams, players, history, currentPot,
+      currentPlayerId, currentBid, currentLeadingTeamId, timer,
+    });
+  }, 1000);
+});
