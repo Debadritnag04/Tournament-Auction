@@ -54,3 +54,12 @@ export type AppStep =
   | 'results';
 
 export type AuctionMode = 'mega' | 'mini';
+
+/** Squad layout per team — stores custom player arrangement */
+export interface SquadLayout {
+  formation: string;
+  /** Player IDs in starting XI slots (ordered by position row) */
+  starting11: string[];
+  /** Player IDs on the bench (ordered by user preference) */
+  bench: string[];
+}

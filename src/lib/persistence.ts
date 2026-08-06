@@ -23,6 +23,7 @@ export interface PersistedState {
   currentBid: number;
   currentLeadingTeamId: string | null;
   timer: number;
+  squadLayouts?: Record<string, any>;
 }
 
 /** Save auction state to Supabase (upsert) */

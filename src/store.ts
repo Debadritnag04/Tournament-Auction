@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Player, Team, AuctionConfig, BidHistory, AppStep, AuctionPot, AuctionMode } from './types';
+import { Player, Team, AuctionConfig, BidHistory, AppStep, AuctionPot, AuctionMode, SquadLayout } from './types';
 import { saveAuctionState, loadAuctionState, clearAuctionState, PersistedState } from './lib/persistence';
 
 // Bid increment logic per spec
@@ -20,6 +20,7 @@ interface AppState {
   players: Player[];
   history: BidHistory[];
   currentPot: AuctionPot;
+  squadLayouts: Record<string, SquadLayout>;
 
   // Auction Live State
   currentPlayerId: string | null;
@@ -36,6 +37,7 @@ interface AppState {
   setPlayers: (players: Player[]) => void;
   updatePlayer: (id: string, diff: Partial<Player>) => void;
   setCurrentPot: (pot: AuctionPot) => void;
+  setSquadLayout: (teamId: string, layout: SquadLayout) => void;
 
   // Auction Actions
   startAuctionForPlayer: (playerId: string) => void;
@@ -70,6 +72,7 @@ export const useStore = create<AppState>((set, get) => ({
   players: [],
   history: [],
   currentPot: 'GK',
+  squadLayouts: {},
 
   currentPlayerId: null,
   currentBid: 0,
@@ -88,6 +91,9 @@ export const useStore = create<AppState>((set, get) => ({
     players: s.players.map(p => p.id === id ? { ...p, ...diff } : p),
   })),
   setCurrentPot: (pot) => set({ currentPot: pot }),
+  setSquadLayout: (teamId, layout) => set((s) => ({
+    squadLayouts: { ...s.squadLayouts, [teamId]: layout },
+  })),
 
   startAuctionForPlayer: (playerId) => set((s) => {
     const player = s.players.find(p => p.id === playerId);
@@ -197,6 +203,7 @@ export const useStore = create<AppState>((set, get) => ({
         players: saved.players || [],
         history: saved.history || [],
         currentPot: (saved.currentPot as AuctionPot) || 'GK',
+        squadLayouts: saved.squadLayouts || {},
         currentPlayerId: null,
         currentBid: 0,
         currentLeadingTeamId: null,
@@ -222,7 +229,8 @@ export const useStore = create<AppState>((set, get) => ({
         players: saved.players || [],
         history: saved.history || [],
         currentPot: (saved.currentPot as AuctionPot) || 'GK',
-        currentPlayerId: null, // Don't restore mid-bid (timer-sensitive)
+        squadLayouts: saved.squadLayouts || {},
+        currentPlayerId: null,
         currentBid: 0,
         currentLeadingTeamId: null,
         timer: 0,
@@ -244,6 +252,7 @@ export const useStore = create<AppState>((set, get) => ({
       players: [],
       history: [],
       currentPot: 'GK',
+      squadLayouts: {},
       currentPlayerId: null,
       currentBid: 0,
       currentLeadingTeamId: null,
@@ -265,10 +274,10 @@ useStore.subscribe((state) => {
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     const { step, config, auctionMode, teams, players, history, currentPot,
-      currentPlayerId, currentBid, currentLeadingTeamId, timer } = state;
+      currentPlayerId, currentBid, currentLeadingTeamId, timer, squadLayouts } = state;
     saveAuctionState({
       step, config, auctionMode, teams, players, history, currentPot,
-      currentPlayerId, currentBid, currentLeadingTeamId, timer,
+      currentPlayerId, currentBid, currentLeadingTeamId, timer, squadLayouts,
     });
   }, 1000);
 });
@@ -279,12 +288,12 @@ if (typeof window !== 'undefined') {
     const state = useStore.getState();
     if (state.players.length === 0 || state.step === 'landing') return;
     const { step, config, auctionMode, teams, players, history, currentPot,
-      currentPlayerId, currentBid, currentLeadingTeamId, timer } = state;
+      currentPlayerId, currentBid, currentLeadingTeamId, timer, squadLayouts } = state;
     // Use navigator.sendBeacon for reliable last-second save
     const payload = JSON.stringify({
       id: 'current',
       state: { step, config, auctionMode, teams, players, history, currentPot,
-        currentPlayerId, currentBid, currentLeadingTeamId, timer },
+        currentPlayerId, currentBid, currentLeadingTeamId, timer, squadLayouts },
       updated_at: new Date().toISOString(),
     });
     // Fallback: synchronous save attempt via fetch keepalive
