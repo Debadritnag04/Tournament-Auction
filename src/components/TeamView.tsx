@@ -42,33 +42,49 @@ export default function TeamView({ onClose }: { onClose: () => void }) {
   // Get or compute layout for current team
   const getLayout = useCallback((): { starting11: string[]; bench: string[] } => {
     const saved = squadLayouts[selectedTeamId];
-    if (saved && saved.formation === formation) {
+    if (saved && saved.formation === formation && saved.starting11.length > 0) {
       // Filter out players no longer on team
       const validIds = new Set(teamPlayers.map(p => p.id));
       const validStarting = saved.starting11.filter(id => validIds.has(id));
       const validBench = saved.bench.filter(id => validIds.has(id));
       const assigned = new Set([...validStarting, ...validBench]);
       const unassigned = teamPlayers.filter(p => !assigned.has(p.id));
+      // Place unassigned players on bench
       return {
-        starting11: [...validStarting, ...unassigned.slice(0, 11 - validStarting.length).map(p => p.id)],
-        bench: [...validBench, ...unassigned.slice(11 - validStarting.length).map(p => p.id)],
+        starting11: validStarting,
+        bench: [...validBench, ...unassigned.map(p => p.id)],
       };
     }
-    // Auto-generate layout based on formation
+
+    // Auto-generate layout: place players in CORRECT positional zones
     const { def: defCount, mid: midCount, att: attCount } = parseFormation(formation);
+
+    // Group by actual position type
     const gks = teamPlayers.filter(p => p.position === 'GK').sort((a, b) => b.rating - a.rating);
-    const defs = teamPlayers.filter(p => p.position === 'DEF').sort((a, b) => b.rating - a.rating);
-    const mids = teamPlayers.filter(p => p.position === 'MID').sort((a, b) => b.rating - a.rating);
-    const atts = teamPlayers.filter(p => p.position === 'ATT').sort((a, b) => b.rating - a.rating);
-    const starting = [
-      ...gks.slice(0, 1).map(p => p.id),
-      ...defs.slice(0, defCount).map(p => p.id),
-      ...mids.slice(0, midCount).map(p => p.id),
-      ...atts.slice(0, attCount).map(p => p.id),
+    const defenders = teamPlayers.filter(p => p.position === 'DEF').sort((a, b) => b.rating - a.rating);
+    const midfielders = teamPlayers.filter(p => p.position === 'MID').sort((a, b) => b.rating - a.rating);
+    const attackers = teamPlayers.filter(p => p.position === 'ATT').sort((a, b) => b.rating - a.rating);
+
+    // Build starting XI: pick best players from each zone up to formation limit
+    const startingGK = gks.slice(0, 1);
+    const startingDEF = defenders.slice(0, defCount);
+    const startingMID = midfielders.slice(0, midCount);
+    const startingATT = attackers.slice(0, attCount);
+
+    // Ordered: GK first, then DEF, then MID, then ATT (back to front on pitch)
+    const starting11Ids = [
+      ...startingGK.map(p => p.id),
+      ...startingDEF.map(p => p.id),
+      ...startingMID.map(p => p.id),
+      ...startingATT.map(p => p.id),
     ];
-    const startingSet = new Set(starting);
-    const bench = teamPlayers.filter(p => !startingSet.has(p.id)).map(p => p.id);
-    return { starting11: starting, bench };
+
+    // If we don't have enough players in a zone, fill from other zones (bench overflow)
+    // But never misplace — just leave slots empty rather than wrong position
+    const startingSet = new Set(starting11Ids);
+    const benchIds = teamPlayers.filter(p => !startingSet.has(p.id)).map(p => p.id);
+
+    return { starting11: starting11Ids, bench: benchIds };
   }, [selectedTeamId, formation, teamPlayers, squadLayouts]);
 
   const layout = getLayout();
@@ -168,12 +184,11 @@ export default function TeamView({ onClose }: { onClose: () => void }) {
     if (saved?.formation) setFormation(saved.formation);
   };
 
-  // Position groups for starting XI display
-  const { def: defCount, mid: midCount, att: attCount } = parseFormation(formation);
-  const gkSlot = starting11Players.slice(0, 1);
-  const defSlot = starting11Players.slice(1, 1 + defCount);
-  const midSlot = starting11Players.slice(1 + defCount, 1 + defCount + midCount);
-  const attSlot = starting11Players.slice(1 + defCount + midCount, 11);
+  // Position groups for starting XI display — group by actual player position
+  const gkSlot = starting11Players.filter(p => p.position === 'GK');
+  const defSlot = starting11Players.filter(p => p.position === 'DEF');
+  const midSlot = starting11Players.filter(p => p.position === 'MID');
+  const attSlot = starting11Players.filter(p => p.position === 'ATT');
 
   // Export functions
   const handleExportCSV = () => {
